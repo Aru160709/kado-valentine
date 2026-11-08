@@ -6,7 +6,7 @@ export const config = {
   pengirim: 'Aku',                 // nama kamu (tanda tangan surat)
 
   // ---- PASSWORD: nama + tanggal jadian ----
-  namaBenar: ['sayang', 'sayangku'], // nama yang diterima (huruf besar/kecil bebas)
+  namaBenar: ['sayang', 'sayangkuu'], // nama yang diterima (huruf besar/kecil bebas)
   tanggalJadian: '2026-01-26',       // format TAHUN-BULAN-TANGGAL
   petunjuk: 'Tanggalnya hari yang paling kita ingat. Coba ingat-ingat lagi ya.',
 
