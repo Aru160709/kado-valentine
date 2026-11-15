@@ -1,4 +1,5 @@
 <script>
+  import { tick } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { config } from './config.js';
   import Ambient from './lib/Ambient.svelte';
@@ -8,11 +9,16 @@
   import Videos from './lib/Videos.svelte';
   import Game from './lib/Game.svelte';
   import SuratPage from './lib/SuratPage.svelte';
-  import Heart from './lib/Heart.svelte';
+  import Finale from './lib/Finale.svelte';
   import Icon from './lib/Icon.svelte';
   import MusicPlayer from './lib/MusicPlayer.svelte';
 
   const base = import.meta.env.BASE_URL;
+  const playlist = Array.isArray(config.playlist)
+    ? config.playlist
+    : config.musik
+      ? [{ src: config.musik, title: config.lagu?.judul || '', artist: config.lagu?.artis || '' }]
+      : [];
 
   // urutan tetap: Kenangan > Video > Game > Surat
   const steps = [
@@ -22,7 +28,7 @@
     { id: 'surat', next: '' }
   ];
 
-  let stage = 'gate'; // gate | gift | main
+  let stage = 'gate'; // gate | gift | main | finale
   let step = 0;
   let gameDone = false;
   let mainEl;
@@ -30,7 +36,10 @@
   let playing = false;
   let wasPlaying = false;
   let showPlayer = false;
-  let audioOk = true;
+  let audioError = false;
+  let trackIndex = 0;
+  let introPlayed = false;
+  let finishMusicIntro;
   let pos = 0;
   let dur = 0;
 
@@ -42,11 +51,19 @@
 
   $: current = steps[step].id;
   $: canNext = step < steps.length - 1 && (current !== 'game' || gameDone);
+  $: currentTrack = playlist[trackIndex] || null;
 
-  function ensureMusic() {
-    if (!audio || playing) return;
+  async function playAudio() {
+    if (!audio) return;
     audio.volume = 0.6;
-    audio.play().then(() => (playing = true)).catch(() => {});
+    try {
+      await audio.play();
+      playing = true;
+      audioError = false;
+    } catch (error) {
+      playing = false;
+      audioError = true;
+    }
   }
 
   function toggleMusic() {
@@ -55,8 +72,57 @@
       audio.pause();
       playing = false;
     } else {
-      audio.play().then(() => (playing = true)).catch(() => {});
+      playAudio();
     }
+  }
+
+  async function changeTrack(direction) {
+    if (!playlist.length) return;
+    const nextIndex = (trackIndex + direction + playlist.length) % playlist.length;
+    if (audio) {
+      audio.pause();
+      playing = false;
+      audio.currentTime = 0;
+    }
+    audioError = false;
+    trackIndex = nextIndex;
+    await tick();
+    if (audio) {
+      audio.currentTime = 0;
+      playAudio();
+    }
+  }
+
+  function startMusicIntro() {
+    if (!playlist.length) return Promise.resolve();
+    if (introPlayed) {
+      if (!playing) playAudio();
+      return Promise.resolve();
+    }
+    introPlayed = true;
+    showPlayer = true;
+    audioError = false;
+    const intro = new Promise((resolve) => (finishMusicIntro = resolve));
+    return intro;
+  }
+
+  function completeMusicIntro() {
+    if (!finishMusicIntro) return;
+    const finish = finishMusicIntro;
+    finishMusicIntro = null;
+    playAudio();
+    finish();
+  }
+
+  function seekAudio(time) {
+    if (!audio || !Number.isFinite(time) || !Number.isFinite(audio.duration)) return;
+    audio.currentTime = Math.max(0, Math.min(time, audio.duration));
+    syncTime();
+  }
+
+  function handleAudioError() {
+    playing = false;
+    audioError = true;
   }
 
   function videoPlay() {
@@ -70,7 +136,7 @@
   function videoStop() {
     if (wasPlaying && audio) {
       wasPlaying = false;
-      audio.play().then(() => (playing = true)).catch(() => {});
+      playAudio();
     }
   }
 
@@ -87,55 +153,49 @@
   }
 </script>
 
-{#if config.musik}
+{#if currentTrack}
   <audio
     bind:this={audio}
-    src="{base}{config.musik}"
-    loop
+    src="{base}{currentTrack.src}"
     preload="auto"
     on:timeupdate={syncTime}
     on:loadedmetadata={syncTime}
-    on:error={() => (audioOk = false)}
+    on:ended={() => changeTrack(1)}
+    on:error={handleAudioError}
   ></audio>
 {/if}
 
 <Ambient />
 
-{#if config.musik}
+{#if playlist.length}
   <MusicPlayer
     show={showPlayer}
-    available={audioOk}
+    available={true}
     {playing}
-    title={config.lagu ? config.lagu.judul : ''}
-    artist={config.lagu ? config.lagu.artis : ''}
+    title={currentTrack.title}
+    artist={currentTrack.artist}
+    cover={currentTrack.cover || ''}
+    error={audioError}
     {pos}
     {dur}
     ontoggle={toggleMusic}
+    onprev={() => changeTrack(-1)}
+    onnext={() => changeTrack(1)}
+    onseek={seekAudio}
+    onintroend={completeMusicIntro}
   />
 {/if}
 
 {#if stage === 'gate'}
   <div class="layer" out:fade={{ duration: 500 }}>
-    <Gate onok={ensureMusic} ondone={() => { stage = 'gift'; showPlayer = true; }} />
+    <Gate ondone={() => (stage = 'gift')} />
   </div>
 {:else if stage === 'gift'}
   <div class="layer nos" in:fade={{ duration: 600 }} out:fade={{ duration: 500 }}>
-    <GiftStage photos={config.photos} onopen={ensureMusic} onnext={() => { step = 0; stage = 'main'; }} />
+    <GiftStage photos={config.photos} onopen={startMusicIntro} onnext={() => { step = 0; stage = 'main'; }} />
   </div>
-{:else}
+{:else if stage === 'main'}
   <div class="layer" bind:this={mainEl} in:fade={{ duration: 700, delay: 300 }} out:fade={{ duration: 400 }}>
-    <header class="topbar">
-      <span class="brand script">Untuk {config.pasangan}</span>
-
-      <div class="progress" aria-label="Langkah {step + 1} dari {steps.length}">
-        {#each steps as s, i}
-          <span class="dot" class:done={i < step} class:now={i === step}><Heart /></span>
-        {/each}
-      </div>
-
-      <span class="mbtn ghost"></span>
-    </header>
-
     {#key step}
       <main class="page" in:fly={{ y: 24, duration: 450 }}>
         {#if current === 'kenangan'}
@@ -145,7 +205,7 @@
         {:else if current === 'game'}
           <Game onwin={() => (gameDone = true)} onskip={() => (gameDone = true)} skipAfter={config.game.lewatiSetelahKalah} />
         {:else}
-          <SuratPage onreplay={replay} />
+          <SuratPage onfinish={() => (stage = 'finale')} />
         {/if}
       </main>
     {/key}
@@ -160,45 +220,14 @@
       </div>
     {/if}
   </div>
+{:else}
+  <div class="layer finale-layer" in:fade={{ duration: 700 }} out:fade={{ duration: 400 }}>
+    <Finale onreplay={replay} />
+  </div>
 {/if}
 
 <style>
   .nos { overflow: hidden; }
-
-  .topbar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    max-width: var(--maxw);
-    margin: 0 auto;
-    padding: calc(var(--safe-t) + 12px) var(--pad) 10px;
-  }
-  .brand { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: clamp(1.2rem, 4.8vw, 1.9rem); color: var(--pink); text-shadow: 0 0 20px rgba(255, 77, 125, 0.6); white-space: nowrap; }
-
-  .progress { display: flex; gap: clamp(5px, 1.4vw, 10px); flex: none; }
-  .dot { width: clamp(15px, 4vw, 22px); height: clamp(15px, 4vw, 22px); color: rgba(255, 255, 255, 0.2); transition: color 0.5s, transform 0.5s, filter 0.5s; }
-  .dot.done { color: var(--pink); }
-  .dot.now { color: var(--rose); transform: scale(1.3); filter: drop-shadow(0 0 8px rgba(255, 77, 125, 0.9)); animation: dbeat 1.4s ease-in-out infinite; }
-  @keyframes dbeat { 50% { transform: scale(1.5); } }
-
-  .mbtn {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: clamp(36px, 9vw, 46px);
-    height: clamp(36px, 9vw, 46px);
-    border: 1px solid var(--glass-b);
-    border-radius: 50%;
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    color: var(--gold);
-    cursor: pointer;
-  }
-  .mbtn.ghost { visibility: hidden; }
 
   .page { position: relative; padding: 14px 0 calc(var(--safe-b) + 130px); }
 

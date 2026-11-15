@@ -1,58 +1,114 @@
 <script>
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import Heart from './Heart.svelte';
   import Icon from './Icon.svelte';
 
   export let show = false;
   export let available = true;
   export let playing = false;
+  export let error = false;
   export let title = '';
   export let artist = '';
+  export let cover = '';
   export let pos = 0;
   export let dur = 0;
   export let ontoggle = () => {};
+  export let onprev = () => {};
+  export let onnext = () => {};
+  export let onseek = () => {};
+  export let onintroend = () => {};
 
   let phase = 'hidden'; // hidden | popup | minimizing | mini
   let cardEl;
   let miniEl;
   let tx = 0;
   let ty = 0;
-  let sc = 0.2;
+  let sx = 0.2;
+  let sy = 0.2;
   let timer;
   let timer2;
+  let timer3;
+  let introPending = false;
+  let dockExpanded = false;
+  let failedCover = '';
 
   $: pct = dur > 0 ? Math.min(100, (pos / dur) * 100) : 0;
   $: if (show && available && phase === 'hidden') begin();
 
-  function begin() {
+  const base = import.meta.env.BASE_URL;
+
+  function formatTime(value) {
+    if (!Number.isFinite(value) || value < 0) return '0:00';
+    const minutes = Math.floor(value / 60);
+    const seconds = Math.floor(value % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+
+  async function begin() {
+    introPending = true;
+    dockExpanded = false;
     phase = 'popup';
-    timer = setTimeout(minimize, 4800);
+    await tick();
+    timer = setTimeout(minimize, 1600);
   }
 
   function minimize() {
     if (phase !== 'popup') return;
     clearTimeout(timer);
     if (cardEl && miniEl) {
-      const c = cardEl.getBoundingClientRect();
-      const m = miniEl.getBoundingClientRect();
-      tx = Math.round(m.left + m.width / 2 - (c.left + c.width / 2));
-      ty = Math.round(m.top + m.height / 2 - (c.top + c.height / 2));
-      sc = Math.max(0.05, m.width / c.width);
+      const card = cardEl.getBoundingClientRect();
+      const mini = miniEl.getBoundingClientRect();
+      tx = Math.round(mini.left + mini.width / 2 - (card.left + card.width / 2));
+      ty = Math.round(mini.top + mini.height / 2 - (card.top + card.height / 2));
+      sx = Math.max(0.05, miniEl.offsetWidth / cardEl.offsetWidth);
+      sy = Math.max(0.05, miniEl.offsetHeight / cardEl.offsetHeight);
     }
     phase = 'minimizing';
-    timer2 = setTimeout(() => (phase = 'mini'), 950);
+    timer2 = setTimeout(() => {
+      phase = 'mini';
+      timer3 = setTimeout(() => {
+        dockExpanded = false;
+        if (!introPending) return;
+        introPending = false;
+        onintroend();
+      }, 600);
+    }, 950);
   }
 
-  function toggle(e) {
+  function stopAndCall(e, callback) {
     e.stopPropagation();
-    ontoggle();
+    callback();
+  }
+
+  function toggleDock() {
+    dockExpanded = !dockExpanded;
+  }
+
+  function seek(e) {
+    e.stopPropagation();
+    onseek(Number(e.currentTarget.value));
+  }
+
+  function collapseOnPageClick() {
+    if (phase === 'mini' && dockExpanded && !introPending) dockExpanded = false;
+  }
+
+  function collapseOnEscape(e) {
+    if (e.key === 'Escape' && phase === 'mini' && dockExpanded && !introPending) dockExpanded = false;
+  }
+
+  function coverFailed() {
+    failedCover = cover;
   }
 
   onDestroy(() => {
     clearTimeout(timer);
     clearTimeout(timer2);
+    clearTimeout(timer3);
   });
 </script>
+
+<svelte:window on:click={collapseOnPageClick} on:keydown={collapseOnEscape} />
 
 {#if available}
   {#if phase === 'popup' || phase === 'minimizing'}
@@ -60,40 +116,153 @@
     <div
       class="card"
       class:go={phase === 'minimizing'}
-      style="--tx:{tx}px;--ty:{ty}px;--sc:{sc}"
+      style="--tx:{tx}px;--ty:{ty}px;--sx:{sx};--sy:{sy}"
       bind:this={cardEl}
-      role="button"
-      tabindex="0"
-      aria-label="Tutup pemutar lagu"
-      on:click={minimize}
-      on:keydown={(e) => e.key === 'Enter' && minimize()}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pemutar musik"
     >
-      <div class="disc" class:spin={playing}>
-        <span class="label"><span class="lh"><Heart /></span></span>
+      <div class="player-header">
+        <div class="cover">
+          {#if cover && failedCover !== cover}
+            <img src="{base}{cover}" alt="" on:error={coverFailed} />
+          {:else}
+            <span class="cover-vinyl"><span class="cover-heart"><Heart /></span></span>
+          {/if}
+        </div>
+        <div class="track-meta">
+          <h3 class="track-title" title={title}>{title}</h3>
+          <p class="track-artist" title={artist}>{artist}</p>
+        </div>
       </div>
 
-      <p class="now">{playing ? 'Sedang diputar' : 'Lagu siap diputar'}</p>
-      <h3 class="title">{title}</h3>
-      <p class="artist">{artist}</p>
-
-      <div class="eq" class:on={playing} aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="bar" aria-hidden="true"><span style="width:{pct}%"></span></div>
-
-      <button class="pp" on:click={toggle}>{playing ? 'Jeda' : 'Putar'}</button>
-      <p class="hint">Ketuk di mana saja untuk menutup</p>
+      <div class="player-details">
+        <div class="time-row">
+          <span>{formatTime(pos)}</span>
+          <div class="progress-control">
+            <div class="progress-track" aria-hidden="true"><span style="width:{pct}%"></span></div>
+            <input
+              class="progress-input"
+              type="range"
+              min="0"
+              max={dur}
+              step="0.1"
+              value={pos}
+              disabled={dur <= 0 || phase !== 'mini'}
+              on:input={seek}
+              on:click={(e) => e.stopPropagation()}
+              aria-label="Posisi lagu"
+              aria-valuetext={formatTime(pos)}
+            />
+          </div>
+          <span>{formatTime(dur)}</span>
+        </div>
+        <div class="player-controls">
+          <button class="player-skip prev" on:click={(e) => stopAndCall(e, onprev)} disabled={phase !== 'mini'} aria-label="Lagu sebelumnya">
+            <Icon name="arrow" size={19} />
+          </button>
+          <button class="player-play" on:click={(e) => stopAndCall(e, ontoggle)} disabled={phase !== 'mini'} aria-label={playing ? 'Jeda lagu' : 'Putar lagu'}>
+            {#if playing}<span class="pause-glyph"><i></i><i></i></span>{:else}<span class="play-glyph"></span>{/if}
+          </button>
+          <button class="player-skip" on:click={(e) => stopAndCall(e, onnext)} disabled={phase !== 'mini'} aria-label="Lagu berikutnya">
+            <Icon name="arrow" size={19} />
+          </button>
+        </div>
+        {#if error}<p class="player-error">File lagu tidak bisa diputar. Periksa path di konfigurasi.</p>{/if}
+      </div>
     </div>
   {/if}
 
-  <button
+  <div
     class="mini"
     class:show={phase === 'mini'}
+    class:expanded={dockExpanded}
     bind:this={miniEl}
-    on:click={ontoggle}
-    aria-label={playing ? 'Jeda lagu' : 'Putar lagu'}
+    aria-hidden={phase !== 'mini'}
+    role="group"
+    aria-label="Pemutar musik"
   >
-    <span class="vinyl" class:spin={playing}></span>
-    {#if !playing}<span class="slash"><Icon name="mute" size={16} /></span>{/if}
-  </button>
+    {#if dockExpanded}
+      <div class="player-header">
+        <button
+          class="cover cover-button"
+          on:click={(e) => stopAndCall(e, toggleDock)}
+          tabindex={phase === 'mini' ? 0 : -1}
+          aria-expanded={dockExpanded}
+          aria-label="Kecilkan pemutar"
+        >
+          {#if cover && failedCover !== cover}
+            <img src="{base}{cover}" alt="" on:error={coverFailed} />
+          {:else}
+            <span class="cover-vinyl"><span class="cover-heart"><Heart /></span></span>
+          {/if}
+        </button>
+        <div class="track-meta">
+          <h3 class="track-title" title={title}>{title}</h3>
+          <p class="track-artist" title={artist}>{artist}</p>
+        </div>
+      </div>
+      <div class="player-details">
+        <div class="time-row">
+          <span>{formatTime(pos)}</span>
+          <div class="progress-control">
+            <div class="progress-track" aria-hidden="true"><span style="width:{pct}%"></span></div>
+            <input
+              class="progress-input"
+              type="range"
+              min="0"
+              max={dur}
+              step="0.1"
+              value={pos}
+              disabled={dur <= 0}
+              on:input={seek}
+              on:click={(e) => e.stopPropagation()}
+              aria-label="Posisi lagu"
+              aria-valuetext={formatTime(pos)}
+            />
+          </div>
+          <span>{formatTime(dur)}</span>
+        </div>
+        <div class="player-controls">
+          <button
+            class="player-skip prev"
+            on:click={(e) => stopAndCall(e, onprev)}
+            tabindex={phase === 'mini' ? 0 : -1}
+            aria-label="Lagu sebelumnya"
+          ><Icon name="arrow" size={19} /></button>
+          <button
+            class="player-play"
+            on:click={(e) => stopAndCall(e, ontoggle)}
+            tabindex={phase === 'mini' ? 0 : -1}
+            aria-label={playing ? 'Jeda lagu' : 'Putar lagu'}
+          >
+            {#if playing}<span class="pause-glyph"><i></i><i></i></span>{:else}<span class="play-glyph"></span>{/if}
+          </button>
+          <button
+            class="player-skip"
+            on:click={(e) => stopAndCall(e, onnext)}
+            tabindex={phase === 'mini' ? 0 : -1}
+            aria-label="Lagu berikutnya"
+          ><Icon name="arrow" size={19} /></button>
+        </div>
+        {#if error}<p class="player-error">File lagu tidak bisa diputar. Periksa path di konfigurasi.</p>{/if}
+      </div>
+    {:else}
+      <button
+        class="closed-thumb"
+        on:click={(e) => stopAndCall(e, toggleDock)}
+        tabindex={phase === 'mini' ? 0 : -1}
+        aria-expanded={dockExpanded}
+        aria-label="Buka pemutar musik"
+      >
+        {#if cover && failedCover !== cover}
+          <img src="{base}{cover}" alt="" on:error={coverFailed} />
+        {:else}
+          <span class="cover-vinyl"><span class="cover-heart"><Heart /></span></span>
+        {/if}
+      </button>
+    {/if}
+  </div>
 {/if}
 
 <style>
@@ -101,157 +270,202 @@
     position: fixed;
     inset: 0;
     z-index: 65;
-    background: rgba(15, 2, 10, 0.55);
-    backdrop-filter: blur(4px);
+    background: rgba(15, 2, 10, 0.22);
+    backdrop-filter: blur(7px);
     animation: fadein 0.4s backwards;
-    transition: opacity 0.6s 0.2s;
   }
-  .backdrop.out { opacity: 0; pointer-events: none; }
   @keyframes fadein { from { opacity: 0; } }
 
   .card {
     position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
     z-index: 70;
-    width: min(21rem, calc(100% - 2 * var(--pad)));
+    inset: 0;
+    width: min(32rem, calc(100% - var(--pad) - var(--pad)));
     height: max-content;
     margin: auto;
-    padding: 1.8rem 1.4rem 1.3rem;
-    text-align: center;
-    border-radius: 1.8rem;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
+    padding: 0.65rem;
+    text-align: left;
+    border-radius: 1.5rem;
+    background: linear-gradient(130deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
     border: 1px solid var(--glass-b);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 70px rgba(255, 77, 125, 0.3);
-    cursor: pointer;
-    animation: cardin 0.7s cubic-bezier(0.2, 1.3, 0.4, 1) backwards;
-    transition: transform 0.95s cubic-bezier(0.6, 0, 0.2, 1), opacity 0.5s ease-in 0.45s, border-radius 0.95s;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.3), 0 0 40px rgba(255, 77, 125, 0.2);
+    color: var(--cream);
+    animation: cardin 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+    transition: transform 0.95s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.95s ease;
   }
-  .card.go {
-    transform: translate(var(--tx), var(--ty)) scale(var(--sc));
-    opacity: 0;
-    border-radius: 50%;
-    pointer-events: none;
+  .card.go { transform: translate(var(--tx), var(--ty)) scale(var(--sx), var(--sy)); opacity: 0.8; border-radius: 50%; pointer-events: none; }
+  @keyframes cardin { from { opacity: 0; transform: scale(0.82); } }
+  .play-glyph {
+    width: 0;
+    height: 0;
+    margin-left: 3px;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 10px solid currentColor;
   }
-  @keyframes cardin { from { opacity: 0; transform: translateY(40px) scale(0.7); } }
+  .pause-glyph { display: flex; align-items: center; gap: 4px; height: 15px; }
+  .pause-glyph i { display: block; width: 3px; height: 100%; border-radius: 2px; background: currentColor; }
+  @keyframes minipop { from { opacity: 0; transform: translateY(-8px) scale(0.86); } }
 
-  .disc {
+  .player-header { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
+  .cover {
     position: relative;
-    width: 7.5rem;
-    height: 7.5rem;
-    margin: 0 auto 1rem;
-    border-radius: 50%;
-    background: repeating-radial-gradient(circle at 50% 50%, #1a0a14 0 2px, #2a1220 2px 4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 77, 125, 0.4);
-    animation: spin 6s linear infinite;
-    animation-play-state: paused;
-  }
-  .disc.spin { animation-play-state: running; }
-  .disc::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: conic-gradient(from 30deg, transparent 0 20%, rgba(255, 255, 255, 0.14) 25%, transparent 30% 70%, rgba(255, 255, 255, 0.1) 75%, transparent 80%);
-  }
-  .label {
-    position: absolute;
-    inset: 31%;
-    z-index: 1;
     display: grid;
     place-items: center;
+    flex: none;
+    width: 3.25rem;
+    height: 3.25rem;
+    overflow: hidden;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ff8fb1, #e11d48);
+    background: repeating-radial-gradient(circle at 50% 50%, #311322 0 2px, #4a1b32 2px 4px);
+    box-shadow: 0 4px 12px rgba(55, 19, 41, 0.24);
+    transform: rotate(-7deg);
   }
-  .lh { width: 48%; height: 48%; color: #fff; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .now { font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold); }
-  .title { margin-top: 0.35rem; font-size: 1.45rem; line-height: 1.2; }
-  .artist { margin-top: 0.25rem; font-size: 0.9rem; color: var(--muted); }
-
-  .eq { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 1.6rem; margin: 1rem 0 0.7rem; }
-  .eq i {
-    display: block;
-    width: 5px;
+  .cover img { width: 100%; height: 100%; object-fit: cover; }
+  .cover-vinyl {
+    display: grid;
+    place-items: center;
+    width: 100%;
     height: 100%;
-    border-radius: 3px;
-    background: linear-gradient(to top, #ff4d7d, #ffd9a0);
-    transform-origin: bottom;
-    transform: scaleY(0.2);
-    animation: eq 0.9s ease-in-out infinite;
-    animation-play-state: paused;
+    border-radius: 50%;
+    background: repeating-radial-gradient(circle at 50% 50%, #311322 0 2px, #4a1b32 2px 4px);
   }
-  .eq.on i { animation-play-state: running; }
-  .eq i:nth-child(2) { animation-delay: -0.3s; animation-duration: 0.7s; }
-  .eq i:nth-child(3) { animation-delay: -0.6s; animation-duration: 1.1s; }
-  .eq i:nth-child(4) { animation-delay: -0.2s; animation-duration: 0.8s; }
-  .eq i:nth-child(5) { animation-delay: -0.5s; animation-duration: 1s; }
-  @keyframes eq { 0%, 100% { transform: scaleY(0.2); } 50% { transform: scaleY(1); } }
-
-  .bar { height: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
-  .bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #ff8fb1, #ff4d7d); transition: width 0.3s linear; }
-
-  .pp {
-    margin-top: 1rem;
-    padding: 0.6rem 1.6rem;
-    border: 1px solid var(--glass-b);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    font-size: 0.9rem;
+  .cover-heart {
+    display: grid;
+    place-items: center;
+    width: 38%;
+    height: 38%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff8fb1, #e11d48);
+    color: #fff;
+  }
+  .cover-heart :global(svg) { width: 65%; height: 65%; }
+  .cover-button { padding: 0; border: 0; cursor: pointer; }
+  .track-meta { flex: 1; min-width: 0; text-align: left; }
+  .track-title, .track-artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track-title { font-family: inherit; font-size: 0.9rem; font-weight: 600; line-height: 1.3; color: var(--cream); }
+  .track-artist { margin-top: 0.15rem; font-size: 0.76rem; line-height: 1.25; color: var(--muted); }
+  .player-details { margin-top: 0.65rem; }
+  .time-row { display: flex; align-items: center; gap: 0.6rem; color: var(--muted); font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+  .progress-control { position: relative; display: flex; align-items: center; flex: 1; height: 1.1rem; min-width: 0; }
+  .progress-track { width: 100%; height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.2); }
+  .progress-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff8fb1, #ff4d7d); transition: width 0.3s linear; }
+  .progress-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    appearance: none;
+    background: transparent;
     cursor: pointer;
   }
-  .hint { margin-top: 0.8rem; font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
+  .progress-input:disabled { cursor: default; }
+  .progress-input::-webkit-slider-runnable-track { height: 5px; background: transparent; }
+  .progress-input::-moz-range-track { height: 5px; background: transparent; }
+  .progress-input::-webkit-slider-thumb {
+    width: 13px;
+    height: 13px;
+    margin-top: -4px;
+    appearance: none;
+    border: 0;
+    border-radius: 50%;
+    background: #ff6d98;
+    box-shadow: 0 0 8px rgba(255, 77, 125, 0.7);
+  }
+  .progress-input::-moz-range-thumb { width: 13px; height: 13px; border: 0; border-radius: 50%; background: #ff6d98; box-shadow: 0 0 8px rgba(255, 77, 125, 0.7); }
+  .player-controls { display: flex; align-items: center; justify-content: center; gap: 1.2rem; margin-top: 0.75rem; }
+  .player-skip {
+    display: grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 0;
+    background: transparent;
+    color: #ff6d98;
+    cursor: pointer;
+  }
+  .player-skip.prev { transform: rotate(180deg); }
+  .player-play {
+    display: grid;
+    place-items: center;
+    width: 2.9rem;
+    height: 2.9rem;
+    border: 0;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ff91b2, #ff6d98);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(255, 77, 125, 0.26);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .player-play:active { transform: scale(0.92); }
+  .player-error { margin-top: 0.6rem; text-align: center; color: var(--muted); font-size: 0.68rem; }
+  .player-skip:disabled, .player-play:disabled { opacity: 0.45; cursor: default; }
 
   .mini {
     position: fixed;
     z-index: 60;
     top: calc(var(--safe-t) + 12px);
     right: max(var(--pad), calc((100vw - var(--maxw)) / 2 + var(--pad)));
-    width: clamp(36px, 9vw, 46px);
-    height: clamp(36px, 9vw, 46px);
+    width: clamp(44px, 13vw, 58px);
+    height: clamp(44px, 13vw, 58px);
     padding: 0;
+    overflow: visible;
     border: 0;
     border-radius: 50%;
-    background: none;
-    cursor: pointer;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     opacity: 0;
     transform: scale(0.6);
     pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.2, 1.4, 0.4, 1), width 0.3s, height 0.3s, padding 0.3s, border-radius 0.3s;
   }
+  .mini::after { display: none; }
   .mini.show { opacity: 1; transform: scale(1); pointer-events: auto; animation: minipop 0.6s cubic-bezier(0.2, 1.8, 0.4, 1); }
-  .mini.show::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid var(--pink);
-    animation: miniring 1s ease-out 0.1s;
-    opacity: 0;
+  .mini.expanded {
+    width: min(32rem, calc(100vw - var(--pad) - var(--pad)));
+    height: auto;
+    padding: 0.65rem;
+    overflow: hidden;
+    border: 1px solid var(--glass-b);
+    border-radius: 1.5rem;
+    background: linear-gradient(130deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+    color: var(--cream);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28), 0 2px 12px rgba(255, 143, 177, 0.18);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
-  @keyframes minipop { from { opacity: 0; transform: scale(0.4); } }
-  @keyframes miniring { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.2); } }
+  .closed-thumb {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    background: repeating-radial-gradient(circle at 50% 50%, #311322 0 2px, #4a1b32 2px 4px);
+    box-shadow: 0 6px 18px rgba(35, 7, 23, 0.32), 0 0 20px rgba(255, 77, 125, 0.35);
+    cursor: pointer;
+  }
+  .closed-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .closed-thumb .cover-vinyl { width: 100%; height: 100%; }
+  .mini.expanded .cover { width: 3.25rem; height: 3.25rem; cursor: pointer; }
+  .mini.expanded .player-details { animation: details-in 0.24s ease-out both; }
+  @keyframes details-in { from { opacity: 0; transform: translateY(-5px); } }
 
-  .vinyl {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: repeating-radial-gradient(circle at 50% 50%, #1a0a14 0 1.5px, #2a1220 1.5px 3px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 77, 125, 0.5);
-    animation: spin 3s linear infinite;
-    animation-play-state: paused;
+  @media (max-width: 420px) {
+    .card { padding: 0.6rem; }
+    .cover { width: 2.85rem; height: 2.85rem; }
+    .mini.expanded { padding: 0.55rem; }
+    .mini.expanded .cover { width: 2.85rem; height: 2.85rem; }
+    .player-header { gap: 0.5rem; }
+    .track-title { font-size: 0.82rem; }
+    .track-artist { font-size: 0.7rem; }
   }
-  .vinyl.spin { animation-play-state: running; }
-  .vinyl::before {
-    content: '';
-    position: absolute;
-    inset: 31%;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ff8fb1, #e11d48);
-  }
-  .slash { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; text-shadow: 0 0 6px rgba(0, 0, 0, 0.8); pointer-events: none; }
 </style>

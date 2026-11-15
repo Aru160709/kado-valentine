@@ -32,7 +32,7 @@
     setTimeout(async () => {
       phase = 'open';
       await tick();
-      if (paperEl) paperEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (paperEl) paperEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setTimeout(type, 900);
     }, 2100);
   }
@@ -64,7 +64,7 @@
   onDestroy(() => clearTimeout(timer));
 </script>
 
-<section class="wrap">
+<section class="wrap" class:reading={phase === 'open'}>
   {#if phase !== 'open'}
     <div class="intro" out:fade={{ duration: 400 }}>
       <p class="eyebrow">Dari hatiku</p>
@@ -114,7 +114,7 @@
           {#if ps}<p class="ps">{ps}</p>{/if}
         </div>
       {:else}
-        <p class="skiphint">Ketuk surat untuk melewati</p>
+        <button type="button" class="skiphint" on:click={skip}>Ketuk surat untuk melewati</button>
       {/if}
     </article>
   {/if}
@@ -122,6 +122,12 @@
 
 <style>
   .wrap { max-width: 36rem; margin: 0 auto; padding: 0 var(--pad); text-align: center; }
+  .wrap:not(.reading) {
+    min-height: calc(100dvh - var(--safe-t) - var(--safe-b) - 144px);
+    display: grid;
+    place-items: center;
+  }
+  .wrap.reading { padding-top: clamp(18px, 5vh, 48px); padding-bottom: calc(var(--safe-b) + 150px); }
   .eyebrow { font-size: 0.72rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--gold); }
   h2 { margin: 6px 0 26px; font-size: var(--fs-h2); }
 
@@ -232,7 +238,9 @@
 
   .paper {
     position: relative;
-    margin-top: 6px;
+    width: 100%;
+    max-width: 36rem;
+    margin: 6px auto 0;
     padding: 34px 20px 30px 42px;
     text-align: left;
     color: #4c0519;
@@ -293,7 +301,7 @@
   }
   @keyframes caret { 50% { opacity: 0; } }
 
-  .skiphint { margin-top: 14px; text-align: center; font-size: 0.74rem; color: #b45f78; }
+  .skiphint { margin: 14px auto 0; display: block; border: 0; background: none; font: inherit; font-size: 0.74rem; color: #b45f78; cursor: pointer; }
 
   .sign { position: relative; margin-top: 18px; text-align: right; }
   .dgn { font-size: 1.35rem; color: #7a2a45; }
@@ -301,4 +309,10 @@
   .sheart { display: inline-block; width: 22px; height: 22px; margin-top: 2px; color: var(--rose); animation: hb 1.2s ease-in-out infinite; }
   @keyframes hb { 50% { transform: scale(1.3); } }
   .ps { margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(180, 100, 120, 0.5); text-align: left; font-size: 0.85rem; font-style: italic; line-height: 1.6; color: #881337; }
+
+  @media (max-width: 640px) {
+    .wrap:not(.reading) { min-height: calc(100dvh - var(--safe-t) - var(--safe-b) - 144px); }
+    .wrap.reading { padding-top: 24px; }
+    .paper { padding-left: 40px; }
+  }
 </style>

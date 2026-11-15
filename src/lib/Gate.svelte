@@ -88,8 +88,8 @@
 
       <p class="eyebrow">Khusus untukmu</p>
       {#if phase === 'idle'}
-        <h1>Siapa yang datang?</h1>
-        <p class="sub">Masukkan nama dan tanggal jadian kita untuk membuka kejutan ini.</p>
+        <h1></h1>
+        <p class="sub"></p>
       {:else}
         <h1 class="welcome">Selamat datang, {config.pasangan}</h1>
         <p class="sub">Kejutannya sudah menunggu...</p>
@@ -129,12 +129,12 @@
     place-items: center;
     padding: calc(var(--safe-t) + 20px) 18px calc(var(--safe-b) + 20px);
   }
-  .enter { width: min(100%, 26rem); animation: rise 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) backwards; }
+  .enter { width: min(100%, 24rem); animation: rise 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) backwards; }
   @keyframes rise { from { opacity: 0; transform: translateY(40px) scale(0.96); } }
 
   .card {
     position: relative;
-    padding: 34px 24px 28px;
+    padding: 42px 32px 36px;
     text-align: center;
     border-radius: 28px;
     background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
@@ -155,7 +155,7 @@
     80% { transform: translateX(-3px); }
   }
 
-  .lockwrap { position: relative; width: 84px; height: 84px; margin: 0 auto 14px; }
+  .lockwrap { position: relative; width: 84px; height: 84px; margin: 0 auto 20px; }
   .lockwrap::before {
     content: '';
     position: absolute;
@@ -214,13 +214,13 @@
   @keyframes ring { 0% { opacity: 0.9; transform: scale(0.6); } 100% { opacity: 0; transform: scale(3.6); } }
 
   .eyebrow { font-size: 0.72rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--gold); }
-  h1 { margin-top: 8px; font-size: clamp(1.7rem, 7vw, 2.1rem); line-height: 1.2; }
+  h1 { margin-top: 12px; font-size: clamp(1.7rem, 7vw, 2.1rem); line-height: 1.2; }
   .welcome { color: var(--pink); animation: rise 0.8s 0.2s backwards; }
-  .sub { margin: 10px auto 20px; max-width: 290px; font-size: 0.9rem; line-height: 1.55; color: var(--muted); }
+  .sub { margin: 12px auto 26px; max-width: 290px; font-size: 0.9rem; line-height: 1.55; color: var(--muted); }
 
-  form { text-align: left; }
-  label { display: block; margin-bottom: 14px; }
-  label span { display: block; margin-bottom: 6px; font-size: 0.78rem; color: var(--muted); }
+  form { display: grid; gap: 20px; text-align: left; }
+  label { display: block; }
+  label span { display: block; margin-bottom: 9px; font-size: 0.82rem; color: var(--muted); }
   input {
     width: 100%;
     min-height: 50px;
@@ -242,7 +242,7 @@
     position: relative;
     overflow: hidden;
     width: 100%;
-    margin-top: 6px;
+    margin-top: 4px;
     padding: 15px;
     border: 0;
     border-radius: 16px;
@@ -271,6 +271,10 @@
 
   .msg { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: rgba(225, 29, 72, 0.25); border: 1px solid rgba(255, 77, 125, 0.5); font-size: 0.85rem; color: #ffd0dc; animation: rise 0.4s backwards; }
   .hint { margin-top: 10px; font-size: 0.82rem; color: var(--gold); }
+
+  @media (max-width: 420px) {
+    .card { padding: 36px 24px 30px; }
+  }
 
   .wipe {
     position: fixed;

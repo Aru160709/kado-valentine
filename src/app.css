@@ -30,7 +30,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; }
-.script { font-family: 'Dancing Script', cursive; font-weight: 700; }
+.script { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 600; }
 button { font-family: inherit; color: inherit; }
 .layer { position: fixed; inset: 0; z-index: 2; overflow-y: auto; overflow-x: hidden; }
 
