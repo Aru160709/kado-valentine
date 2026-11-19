@@ -19,7 +19,8 @@
 </script>
 
 <section class="wrap" use:reveal>
-  <h2>Kita Sudah Bersama</h2>
+  <h2>Sejak hari itu, kita</h2>
+  <p class="sub">setiap detiknya kusimpan baik-baik.</p>
   <div class="row">
     <div class="cell"><b>{days}</b><span>hari</span></div>
     <div class="cell"><b>{hours}</b><span>jam</span></div>
@@ -29,15 +30,12 @@
 </section>
 
 <style>
-  .wrap { max-width: 36rem; margin: 0 auto; padding: clamp(36px, 6vw, 64px) var(--pad) 0; text-align: center; }
-  h2 { font-size: clamp(1.6rem, 1.2rem + 2vw, 2.6rem); margin-bottom: 16px; }
-  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .cell {
-    padding: 14px 4px;
-    border-radius: 18px;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-    border: 1px solid var(--glass-b);
-  }
-  b { display: block; font-family: 'Playfair Display', serif; font-size: clamp(1.5rem, 1rem + 2.4vw, 2.6rem); color: var(--pink); font-weight: 600; }
-  span { font-size: clamp(0.78rem, 0.74rem + 0.2vw, 0.95rem); color: var(--muted); }
+  .wrap { max-width: 38rem; margin: 0 auto; padding: 34px var(--pad) 0; text-align: center; }
+  h2 { font-size: clamp(1.45rem, 1.1rem + 1.6vw, 2rem); }
+  .sub { margin-top: 5px; color: var(--muted); font-size: 0.82rem; }
+  .row { display: flex; justify-content: center; margin-top: 18px; }
+  .cell { flex: 1; min-width: 0; padding: 0 6px; }
+  .cell + .cell { border-left: 1px solid rgba(255, 217, 160, 0.22); }
+  b { display: block; font-family: 'Playfair Display', serif; font-size: clamp(1.35rem, 1rem + 2.1vw, 2.3rem); color: var(--pink); font-weight: 600; line-height: 1.15; }
+  span { font-size: clamp(0.68rem, 0.64rem + 0.2vw, 0.84rem); color: var(--muted); }
 </style>

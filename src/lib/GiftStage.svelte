@@ -10,7 +10,7 @@
   const base = import.meta.env.BASE_URL;
   const colors = ['#ff4d7d', '#ff8fb1', '#ffd9a0', '#ffffff', '#e11d48', '#ffb3c8'];
 
-  let phase = 'closed'; // closed | shake | open
+  let phase = 'closed'; // closed | shake | closing | open
   let stageEl;
   let boxEl;
   let flying = [];
@@ -56,39 +56,39 @@
     });
   }
 
-  function openBox() {
+  async function openBox() {
     if (phase !== 'closed') return;
     phase = 'shake';
-    onopen();
-
     const r = boxEl.getBoundingClientRect();
     const sr = stageEl.getBoundingClientRect();
     origin = {
       x: Math.round(r.left - sr.left + r.width / 2),
       y: Math.round(r.top - sr.top + r.height * 0.3)
     };
+    await onopen();
 
+    phase = 'closing';
     setTimeout(() => {
       build(origin.x, origin.y);
       phase = 'open';
-      setTimeout(() => (showNext = true), 3200);
-    }, 800);
+      setTimeout(() => (showNext = true), 3600);
+    }, 600);
   }
 
   function build(ox, oy) {
     const { vw, vh } = size();
     const n = photos.length;
-    const jit = photos.map(() => ({ jx: rnd(-0.05, 0.05), jy: rnd(-0.04, 0.04) }));
+    const jit = photos.map(() => ({ jx: rnd(-0.025, 0.025), jy: rnd(-0.02, 0.02) }));
     const t = targets(n, vw, vh, jit);
 
     flying = photos.map((p, i) => {
       const { pw, ph, x1, y1 } = t[i];
       const x0 = ox - pw / 2;
       const y0 = oy - ph / 2;
-      const xm = x0 + (x1 - x0) * 0.55 + rnd(-0.14, 0.14) * vw;
-      const ym = Math.max(-ph * 0.3, Math.min(y0, y1) - 30 - rnd(0, 0.12) * vh);
-      const d = 0.1 + i * 0.09;
-      const dur = rnd(1.5, 2.1);
+      const xm = x0 + (x1 - x0) * 0.52 + rnd(-0.06, 0.06) * vw;
+      const ym = Math.max(-ph * 0.2, Math.min(y0, y1) - 24 - rnd(0, 0.05) * vh);
+      const d = 0.08 + i * 0.1;
+      const dur = rnd(1.9, 2.4);
 
       return {
         src: p.src,
@@ -102,13 +102,13 @@
         y1: Math.round(y1),
         xm: Math.round(xm),
         ym: Math.round(ym),
-        r: Math.round(rnd(-11, 11)),
-        rm: Math.round(rnd(-40, 40)),
+        r: Math.round(rnd(-8, 8)),
+        rm: Math.round(rnd(-24, 24)),
         d: d.toFixed(2),
         dur: dur.toFixed(2),
         bd: (d + dur).toFixed(2),
-        bt: rnd(3.2, 5).toFixed(2),
-        ba: Math.round(rnd(5, 10))
+        bt: rnd(4, 5.5).toFixed(2),
+        ba: Math.round(rnd(4, 8))
       };
     });
 
@@ -151,13 +151,23 @@
   <div class="head">
     {#if phase === 'open'}
       <h2 class="pop script">Surprise!</h2>
+    {:else if phase === 'closing'}
+      <p class="eyebrow">Satu kejutan lagi</p>
+      <h2>Untuk kamu</h2>
     {:else}
-      <p class="eyebrow">Ada kejutan buatmu</p>
-      <h2>Ketuk kadonya</h2>
+      <p class="eyebrow">Hadiah buat kamuu</p>
+      <h2>Buka kadonya</h2>
     {/if}
   </div>
 
-  <div class="boxwrap" class:gone={phase === 'open'} bind:this={boxEl}>
+  <div
+    class="boxwrap"
+    class:gone={phase === 'closing' || phase === 'open'}
+    class:dismissed={phase === 'open'}
+    bind:this={boxEl}
+    inert={phase !== 'closed'}
+    aria-hidden={phase === 'open'}
+  >
     <div class="rays" class:on={phase === 'open'}></div>
     <button class="scene" class:shake={phase === 'shake'} class:opened={phase === 'open'} on:click={openBox} aria-label="Buka kado">
       <span class="shadow"></span>
@@ -242,7 +252,13 @@
   @media (min-width: 420px) { .boxwrap { transform: translateX(-50%) scale(1.15); } }
   @media (min-width: 700px) { .boxwrap { transform: translateX(-50%) scale(1.4); } }
   @media (min-width: 1100px) { .boxwrap { transform: translateX(-50%) scale(1.7); } }
-  .boxwrap.gone { opacity: 0; pointer-events: none; }
+  .boxwrap.gone {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.72);
+    pointer-events: none;
+    transition: opacity 0.45s ease, transform 0.55s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  .boxwrap.dismissed { visibility: hidden; }
 
   .rays {
     position: absolute;
@@ -412,13 +428,13 @@
     width: var(--w);
     transform: translate(var(--x1), var(--y1)) rotate(var(--r));
     will-change: transform;
-    animation: burst var(--dur) cubic-bezier(0.22, 0.8, 0.3, 1) var(--d) backwards;
+    animation: burst var(--dur) cubic-bezier(0.16, 0.75, 0.3, 1) var(--d) backwards;
   }
   .fp:hover { z-index: 5; }
   @keyframes burst {
-    0% { opacity: 0; transform: translate(var(--x0), var(--y0)) scale(0.15) rotate(0deg); }
+    0% { opacity: 0; transform: translate(var(--x0), var(--y0)) scale(0.3) rotate(-2deg); }
     10% { opacity: 1; }
-    55% { transform: translate(var(--xm), var(--ym)) scale(1.2) rotate(var(--rm)); }
+    55% { transform: translate(var(--xm), var(--ym)) scale(1.05) rotate(var(--rm)); }
     100% { transform: translate(var(--x1), var(--y1)) scale(1) rotate(var(--r)); }
   }
   .bobwrap { display: block; animation: bob var(--bt) ease-in-out var(--bd) infinite alternate; }

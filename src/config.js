@@ -12,24 +12,23 @@ export const config = {
 
   // ---- FOTO (taruh file di public/photos) ----
   photos: [
-    { src: 'photos/foto1.svg', caption: 'Pertama kali kita foto bareng' },
-    { src: 'photos/foto2.svg', caption: 'Hari yang selalu aku ingat' },
-    { src: 'photos/foto3.svg', caption: 'Senyum kamu favoritku' },
-    { src: 'photos/foto4.svg', caption: 'Jalan-jalan sama kamu' },
-    { src: 'photos/foto5.svg', caption: 'Makan bareng, ketawa bareng' },
-    { src: 'photos/foto6.svg', caption: 'Kamu rumahku' },
-    { src: 'photos/foto7.svg', caption: 'Selalu ada kamu' },
-    { src: 'photos/foto8.svg', caption: 'Aku sayang kamu' }
+    { src: 'photos/album/foto_1.jpg', caption: 'Pertama kali kita foto bareng', date: '27 November 2025', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_2.jpg', caption: 'Hari yang selalu aku ingat', date: '03 Desember 2025', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_1.jpg', caption: 'Senyum kamu favoritku', date: '12 Desember 2025', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_2.jpg', caption: 'Jalan-jalan sama kamu', date: '25 Desember 2025', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_1.jpg', caption: 'Makan bareng, ketawa bareng', date: '01 Januari 2026', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_2.jpg', caption: 'Kamu rumahku', date: '26 Januari 2026', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_1.jpg', caption: 'Selalu ada kamu', date: '07 Februari 2026', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' },
+    { src: 'photos/album/foto_2.jpg', caption: 'Aku sayang kamu', date: '14 Februari 2026', story: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae sem ac lorem facilisis.' }
   ],
 
   // ---- VIDEO (taruh file di public/videos, format .mp4) ----
   videos: [
-    { src: 'videos/video1.mp4', title: 'Video pertama kita', desc: 'Kenangan yang bikin senyum.' },
-    { src: 'videos/video2.mp4', title: 'Kita berdua', desc: 'Hari-hari yang paling seru.' },
-    { src: 'videos/video3.mp4', title: 'Pesan spesial', desc: 'Khusus buat kamu.' }
+    { src: 'videos/vid_1.mp4', title: 'Video pertama kita', desc: 'Kenangan yang bikin senyum.' },
+    { src: 'videos/vid_1.mp4', title: 'Kita berdua', desc: 'Hari-hari yang paling seru.' },
+    { src: 'videos/vid_1.mp4', title: 'Pesan spesial', desc: 'Khusus buat kamu.' }
   ],
-
-  tanggalSurat: '14 Februari 2026',   // tanggal yang tampil di surat
+ tanggalSurat: '14 Februari 2026',   // tanggal yang tampil di surat
   ps: 'P.S. Surat ini boleh kamu baca berulang-ulang, kapan pun kamu rindu.',
 
   alasan: [
@@ -48,9 +47,10 @@ Terima kasih sudah hadir, sudah bertahan, dan sudah jadi alasan aku tersenyum se
 
 Selamat hari Valentine. Aku sayang kamu, hari ini dan seterusnya.`,
 
-  // ---- LAGU (opsional): taruh di public/music.mp3, kosongkan '' kalau tidak pakai ----
-  musik: 'music.mp3',
-  lagu: { judul: 'Bergema Sampai Selamanya', artis: 'Nadhif Basalamah' }, // tulisan "sedang diputar"
+  // ---- BACKSONG: tambahkan satu objek untuk tiap file lagu di folder public/ ----
+  playlist: [
+    { src: 'music/bergema-selamanya.mp3', title: 'Bergema Sampai Selamanya', artist: 'Nadhif Basalamah', cover: 'music/covers/bergema.jpg' }
+  ],
 
   // ---- WHATSAPP (tombol di akhir) ----
   // nomor format internasional tanpa + dan tanpa 0 di depan, contoh 081234567890 jadi 6281234567890

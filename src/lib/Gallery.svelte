@@ -23,7 +23,7 @@
     >
       <span class="tape"></span>
       <img src="{base}{p.src}" alt={p.caption} />
-      <span class="cap script">{p.caption}</span>
+      <span class="cap script" aria-hidden="true"></span>
     </button>
   {/each}
 </section>
@@ -68,7 +68,7 @@
   @keyframes pop { from { opacity: 0; transform: translate(var(--ox), -240px) scale(0.2) rotate(-40deg); } }
 
   img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: #ffe4ec; }
-  .cap { display: block; padding: 10px 4px 13px; font-size: clamp(1rem, 0.8rem + 0.6vw, 1.4rem); line-height: 1.2; color: #881337; overflow-wrap: anywhere; }
+  .cap { display: block; height: 3.8em; padding: 10px 4px 13px; }
   .tape { position: absolute; top: -10px; left: 50%; width: 64px; height: 20px; transform: translateX(-50%) rotate(-3deg); background: rgba(255, 217, 160, 0.8); z-index: 1; }
 
 </style>
