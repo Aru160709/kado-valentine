@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84fab0"/><stop offset="1" stop-color="#8fd3f4"/></linearGradient></defs>
+  <rect width="400" height="500" fill="url(#g)"/>
+  <path transform="translate(120 150) scale(6.7)" fill="#ffffff" fill-opacity="0.9" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+  <text x="200" y="400" text-anchor="middle" font-family="sans-serif" font-size="26" fill="#ffffff">Foto 5</text>
+  <text x="200" y="435" text-anchor="middle" font-family="sans-serif" font-size="15" fill="#ffffff" fill-opacity="0.9">ganti di public/photos</text>
+</svg>
